@@ -65,6 +65,33 @@ Follow these instructions to set up and run the project on your local machine fo
     ```
     The application will be available at `http://localhost:3000`.
 
+## 🚀 Running with Docker
+
+Alternatively, you can run the application in a containerized environment using Docker. This is the recommended method for a stable, production-like deployment.
+
+### Prerequisites
+
+*   [Docker](https://www.docker.com/get-started)
+*   [Docker Compose](https://docs.docker.com/compose/install/)
+
+### Running the Application
+
+1.  **Build and run the container:**
+    From the root of the project, run the following command:
+    ```bash
+    docker-compose up -d
+    ```
+    This will build the Docker image and start the container in detached mode.
+
+2.  **Access the application:**
+    The application will be available at `http://localhost:8080`.
+
+3.  **Stopping the application:**
+    To stop the container, run:
+    ```bash
+    docker-compose down
+    ```
+
 ## 📜 Available Scripts
 
 In the project directory, you can run:

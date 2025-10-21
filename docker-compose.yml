@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  ai-prompt-refiner:
+    # Build the Docker image from the Dockerfile in the current directory
+    build: .
+    # Assign a friendly name to the container
+    container_name: ai-prompt-refiner
+    # Map port 8080 on the host to port 80 in the container
+    ports:
+      - "8080:80"
+    # Restart the container automatically if it stops
+    restart: unless-stopped

@@ -7,7 +7,7 @@ interface AboutModalProps {
   onClose: () => void;
 }
 
-const GITHUB_REPO_URL = "https://github.com/your-org/your-repo"; // TODO: Replace with your actual repo URL
+const GITHUB_REPO_URL = "https://github.com/ersinkoc/ai-prompt-refiner";
 
 const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
   return (
