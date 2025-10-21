@@ -15,6 +15,8 @@
 
 ---
 
+<img src="screenshot.png" alt="AI Prompt Refiner" />
+
 The **AI Prompt Refiner** is a tool designed to bridge the gap between a simple idea and a high-quality, well-structured AI prompt. Instead of guessing what an AI needs, this application uses Google's Gemini model to engage you in a conversation, asking clarifying questions to collaboratively build the perfect prompt for your task.
 
 ## ✨ Key Features
