@@ -453,7 +453,7 @@ const App: React.FC = () => {
               />
           </div>
         </div>
-        <main className="flex-1 flex flex-col items-center justify-center p-6 bg-gray-100 dark:bg-grid-gray-700/20 overflow-y-auto relative">
+        <main className="flex-1 flex flex-col items-center justify-center p-6 bg-gray-100 dark:bg-gray-900 overflow-y-auto relative">
            {isPanelCollapsed && (
               <button
                 onClick={() => setIsPanelCollapsed(false)}
