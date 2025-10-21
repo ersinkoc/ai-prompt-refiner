@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gemini Prompt Enhancer Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+      }
+    </script>
+    <script>
+      // Set theme on initial load to prevent FOUC and ensure theme is applied correctly
+      if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark')
+      } else {
+        document.documentElement.classList.remove('dark')
+      }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.25.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-markdown": "https://aistudiocdn.com/react-markdown@^9.0.1",
+    "remark-gfm": "https://aistudiocdn.com/remark-gfm@^4.0.0"
+  }
+}
+</script>
+<style>
+  @keyframes shake {
+    10%, 90% { transform: translate3d(-1px, 0, 0); }
+    20%, 80% { transform: translate3d(2px, 0, 0); }
+    30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+    40%, 60% { transform: translate3d(4px, 0, 0); }
+  }
+  .animate-shake {
+    animation: shake 0.82s cubic-bezier(.36,.07,.19,.97) both;
+  }
+  @keyframes rotate-device {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(-90deg); }
+  }
+  .animate-rotate-device {
+    animation: rotate-device 2.5s ease-in-out infinite;
+  }
+  #rotate-overlay { display: none; }
+  /* Show overlay on portrait mobile */
+  @media (max-width: 768px) and (orientation: portrait) {
+    body > #root { display: none; }
+    body > #rotate-overlay { display: flex; }
+  }
+</style>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-white dark:bg-gray-900 transition-colors duration-300">
+    <div id="rotate-overlay" class="fixed inset-0 bg-gray-900 z-[200] flex-col items-center justify-center text-white">
+      <svg class="w-16 h-16 mb-4 text-cyan-400 animate-rotate-device" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+        <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><path d="M12 18h.01"></path>
+      </svg>
+      <h2 class="text-2xl font-bold mb-2">Please Rotate Your Device</h2>
+      <p class="text-lg">This app is best viewed in landscape mode.</p>
+    </div>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

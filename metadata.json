@@ -1,0 +1,5 @@
+{
+  "name": "AI Prompt Refiner",
+  "description": "An AI chatbot powered by Gemini that allows developers to ask questions and enhance their prompts for better results.",
+  "requestFramePermissions": []
+}
