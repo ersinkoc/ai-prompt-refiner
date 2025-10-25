@@ -64,7 +64,7 @@ const RefinementView: React.FC<RefinementViewProps> = ({ isLoading, questions, o
               <input
                 type="text"
                 placeholder="Or type your own answer..."
-                value={answers[q.question] && !q.answers.includes(answers[q.question]) ? answers[q.question] : ''}
+                value={answers[q.question] || ''}
                 onChange={(e) => handleCustomAnswerChange(q.question, e.target.value)}
                 className="w-full bg-gray-100/70 dark:bg-gray-800/70 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-sm text-gray-800 dark:text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"
               />
