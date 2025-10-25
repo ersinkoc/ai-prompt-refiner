@@ -433,6 +433,21 @@ const App: React.FC = () => {
     setPromptState(s => ({ ...s, stage: 'idle', finalPrompts: [] }));
   };
   
+  // ESC key handler for debug panel
+  useEffect(() => {
+    const handleEscKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isLoggingEnabled) {
+        // This would toggle the debug panel if we had access to its state
+        // For now, the debug panel handles its own ESC toggle
+      }
+    };
+
+    document.addEventListener('keydown', handleEscKey);
+    return () => {
+      document.removeEventListener('keydown', handleEscKey);
+    };
+  }, [isLoggingEnabled]);
+
   // Guided Tour Handlers
   const handleTourNext = () => {
     const nextStep = tourStep + 1;
