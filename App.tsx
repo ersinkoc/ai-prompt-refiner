@@ -6,7 +6,7 @@ import ApiKeyModal from './components/ApiKeyModal';
 import DebugPanel from './components/DebugPanel';
 import ToastNotifications from './components/ToastNotifications';
 import GuidedTour from './components/GuidedTour';
-import { PromptHistoryItem, RefinementQuestion, UserAnswer, OutputFormat, DebugLog, GeminiModel, ToastNotification, ToastType, TourStep } from './types';
+import { PromptHistoryItem, RefinementQuestion, UserAnswer, OutputFormat, DebugLog, GeminiModel, ToastNotification, ToastType, TourStep, RefinementContext, FocusArea, GeminiResponse } from './types';
 import { getRefinementStep } from './services/geminiService';
 import { getApiKey, saveApiKey } from './services/apiKeyService';
 import { getTourStatus, setTourCompleted } from './services/tourService';
@@ -146,13 +146,32 @@ const App: React.FC = () => {
       questions: [],
       conversationHistory: [],
       finalPrompts: [],
+      refinementRound: 1,
     });
 
     try {
-      const result = await getRefinementStep(prompt, [], systemInstruction, handleLog, selectedModel);
+      const context: RefinementContext = {
+        basePrompt: prompt,
+        selectedStacks,
+        conversationHistory: [],
+        refinementRound: 1,
+        maxRounds: refinementSettings.maxRounds,
+        focusAreas: refinementSettings.focusAreas,
+        complexity: refinementSettings.complexity,
+        outputStyle: refinementSettings.outputStyle,
+      };
+
+      const result: GeminiResponse = await getRefinementStep(prompt, [], systemInstruction, handleLog, selectedModel, context);
 
       if (result.status === 'refining') {
-        setPromptState(s => ({ ...s, stage: 'refining', questions: result.questions || [] }));
+        setPromptState(s => ({
+          ...s,
+          stage: 'refining',
+          questions: result.questions || [],
+          confidence: result.confidence,
+          suggestedApproach: result.suggestedApproach,
+          nextSteps: result.nextSteps
+        }));
       } else if (result.status === 'complete') {
         const newHistoryItem: PromptHistoryItem = {
           id: `${Date.now()}`,
@@ -162,7 +181,13 @@ const App: React.FC = () => {
           timestamp: new Date(),
         };
         setHistory(prev => [newHistoryItem, ...prev]);
-        setPromptState(s => ({ ...s, stage: 'final', finalPrompts: result.finalPrompts || [] }));
+        setPromptState(s => ({
+          ...s,
+          stage: 'final',
+          finalPrompts: result.finalPrompts || [],
+          confidence: result.confidence,
+          suggestedApproach: result.suggestedApproach
+        }));
       }
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
@@ -207,6 +232,18 @@ const App: React.FC = () => {
   const [selectedStacks, setSelectedStacks] = useState<string[]>([]);
   const [history, setHistory] = useState<PromptHistoryItem[]>([]);
   
+  // Refinement settings
+  const [refinementSettings, setRefinementSettings] = useState({
+    maxRounds: 5,
+    complexity: 'detailed' as 'basic' | 'detailed' | 'comprehensive',
+    outputStyle: 'professional' as 'professional' | 'casual' | 'technical' | 'educational',
+    focusAreas: [
+      { id: 'technical', name: 'Technical Details', enabled: true, weight: 0.8 },
+      { id: 'business', name: 'Business Context', enabled: false, weight: 0.5 },
+      { id: 'examples', name: 'Examples', enabled: true, weight: 0.7 }
+    ] as FocusArea[]
+  });
+
   // State for the main interactive process
   const [error, setError] = useState<string | null>(null);
   const [promptState, setPromptState] = useState<{
@@ -215,12 +252,17 @@ const App: React.FC = () => {
     questions: RefinementQuestion[];
     conversationHistory: UserAnswer[];
     finalPrompts: string[];
+    refinementRound: number;
+    confidence?: number;
+    suggestedApproach?: string;
+    nextSteps?: string[];
   }>({
     stage: 'idle',
     basePrompt: '',
     questions: [],
     conversationHistory: [],
     finalPrompts: [],
+    refinementRound: 1,
   });
   
   // Load history from localStorage on mount
@@ -287,14 +329,38 @@ const App: React.FC = () => {
   const handleRefinementRequest = async (answers: UserAnswer[]) => {
       setError(null);
       const newConversationHistory = [...promptState.conversationHistory, ...answers];
+      const nextRound = promptState.refinementRound + 1;
 
-      setPromptState(s => ({ ...s, stage: 'loading', conversationHistory: newConversationHistory }));
+      setPromptState(s => ({
+        ...s,
+        stage: 'loading',
+        conversationHistory: newConversationHistory,
+        refinementRound: nextRound
+      }));
 
       try {
-        const result = await getRefinementStep(promptState.basePrompt, newConversationHistory, systemInstruction, handleLog, selectedModel);
+        const context: RefinementContext = {
+          basePrompt: promptState.basePrompt,
+          selectedStacks,
+          conversationHistory: newConversationHistory,
+          refinementRound: nextRound,
+          maxRounds: refinementSettings.maxRounds,
+          focusAreas: refinementSettings.focusAreas,
+          complexity: refinementSettings.complexity,
+          outputStyle: refinementSettings.outputStyle,
+        };
+
+        const result: GeminiResponse = await getRefinementStep(promptState.basePrompt, newConversationHistory, systemInstruction, handleLog, selectedModel, context);
 
         if (result.status === 'refining') {
-          setPromptState(s => ({ ...s, stage: 'refining', questions: result.questions || [] }));
+          setPromptState(s => ({
+            ...s,
+            stage: 'refining',
+            questions: result.questions || [],
+            confidence: result.confidence,
+            suggestedApproach: result.suggestedApproach,
+            nextSteps: result.nextSteps
+          }));
         } else if (result.status === 'complete') {
           const newHistoryItem: PromptHistoryItem = {
             id: `${Date.now()}`,
@@ -304,13 +370,24 @@ const App: React.FC = () => {
             timestamp: new Date(),
           };
           setHistory(prev => [newHistoryItem, ...prev]);
-          setPromptState(s => ({ ...s, stage: 'final', finalPrompts: result.finalPrompts || [] }));
+          setPromptState(s => ({
+            ...s,
+            stage: 'final',
+            finalPrompts: result.finalPrompts || [],
+            confidence: result.confidence,
+            suggestedApproach: result.suggestedApproach
+          }));
         }
       } catch (e) {
           const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
           setError(errorMessage);
           setPromptState(s => ({ ...s, stage: 'error' }));
       }
+  };
+
+  const handleContinueRefining = async () => {
+    // Continue the refinement process with existing context
+    await handleRefinementRequest([]);
   };
 
   const handleSetBaseSystemInstruction = (instruction: string) => {
@@ -450,6 +527,14 @@ const App: React.FC = () => {
                 onToggleLogging={() => setIsLoggingEnabled(p => !p)}
                 theme={theme}
                 onToggleTheme={toggleTheme}
+                maxRounds={refinementSettings.maxRounds}
+                onMaxRoundsChange={(rounds) => setRefinementSettings(prev => ({ ...prev, maxRounds: rounds }))}
+                complexity={refinementSettings.complexity}
+                onComplexityChange={(complexity) => setRefinementSettings(prev => ({ ...prev, complexity }))}
+                outputStyle={refinementSettings.outputStyle}
+                onOutputStyleChange={(style) => setRefinementSettings(prev => ({ ...prev, outputStyle: style }))}
+                focusAreas={refinementSettings.focusAreas}
+                onFocusAreasChange={(areas) => setRefinementSettings(prev => ({ ...prev, focusAreas: areas }))}
               />
           </div>
         </div>
@@ -471,6 +556,13 @@ const App: React.FC = () => {
                       questions={promptState.questions}
                       onRefine={handleRefinementRequest}
                       basePrompt={promptState.basePrompt}
+                      refinementRound={promptState.refinementRound}
+                      maxRounds={refinementSettings.maxRounds}
+                      confidence={promptState.confidence}
+                      suggestedApproach={promptState.suggestedApproach}
+                      nextSteps={promptState.nextSteps}
+                      canContinueRefining={promptState.refinementRound < refinementSettings.maxRounds}
+                      onContinueRefining={handleContinueRefining}
                   />
               </div>
           )}

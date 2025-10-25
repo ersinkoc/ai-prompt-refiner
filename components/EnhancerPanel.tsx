@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { categorizedTechStacks } from './techStacks';
-import { SparklesIcon, RefreshCwIcon, EyeIcon, HistoryIcon, TrashIcon, ReuseIcon, ChevronDownIcon, LightbulbIcon, SettingsIcon, KeyIcon, BotIcon, PanelLeftCloseIcon, MoonIcon, SunIcon, InfoIcon } from './icons';
-import { PromptHistoryItem, OutputFormat, GeminiModel } from '../types';
+import { SparklesIcon, RefreshCwIcon, EyeIcon, HistoryIcon, TrashIcon, ReuseIcon, ChevronDownIcon, LightbulbIcon, SettingsIcon, KeyIcon, BotIcon, PanelLeftCloseIcon, MoonIcon, SunIcon, InfoIcon, SlidersIcon } from './icons';
+import { PromptHistoryItem, OutputFormat, GeminiModel, FocusArea } from '../types';
 import ExamplesModal from './ExamplesModal';
 import AboutModal from './AboutModal';
 
@@ -29,6 +29,15 @@ interface EnhancerPanelProps {
   onToggleLogging: () => void;
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
+  // Refinement controls props
+  maxRounds: number;
+  onMaxRoundsChange: (rounds: number) => void;
+  complexity: 'basic' | 'detailed' | 'comprehensive';
+  onComplexityChange: (complexity: 'basic' | 'detailed' | 'comprehensive') => void;
+  outputStyle: 'professional' | 'casual' | 'technical' | 'educational';
+  onOutputStyleChange: (style: 'professional' | 'casual' | 'technical' | 'educational') => void;
+  focusAreas: FocusArea[];
+  onFocusAreasChange: (areas: FocusArea[]) => void;
 }
 
 const trimText = (text: string, length: number) => {
@@ -63,6 +72,14 @@ const EnhancerPanel: React.FC<EnhancerPanelProps> = ({
   onToggleLogging,
   theme,
   onToggleTheme,
+  maxRounds,
+  onMaxRoundsChange,
+  complexity,
+  onComplexityChange,
+  outputStyle,
+  onOutputStyleChange,
+  focusAreas,
+  onFocusAreasChange,
 }) => {
   const [promptToEnhance, setPromptToEnhance] = useState('');
   const [isInvalid, setIsInvalid] = useState(false);
@@ -163,7 +180,7 @@ const EnhancerPanel: React.FC<EnhancerPanelProps> = ({
                         <KeyIcon className="w-4 h-4 mr-3 text-gray-500 dark:text-gray-400" />
                         <span>Update API Key</span>
                     </button>
-                    
+
                     <div>
                         <label htmlFor="model-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           <BotIcon className="w-4 h-4 mr-2 inline-block" />AI Model
@@ -197,6 +214,135 @@ const EnhancerPanel: React.FC<EnhancerPanelProps> = ({
                           }`}
                         />
                       </button>
+                    </div>
+                </div>
+            )}
+
+        {/* Refinement Controls Section */}
+        <div className="py-6 first:pt-0 last:pb-0">
+            <div className="flex justify-between items-center mb-3">
+                <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 flex items-center">
+                    <SlidersIcon className="w-5 h-5 mr-2" />Refinement Controls
+                </h2>
+                <button onClick={() => onToggleSection('refinement-controls')} className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white rounded-md hover:bg-gray-200 dark:hover:bg-gray-700">
+                    <ChevronDownIcon className={`w-5 h-5 transition-transform ${openSections['refinement-controls'] ? 'rotate-180' : ''}`} />
+                </button>
+            </div>
+            {openSections['refinement-controls'] && (
+                <div className="space-y-4 pt-2">
+                    {/* Max Rounds */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Max Refinement Rounds: {maxRounds}
+                        </label>
+                        <input
+                            type="range"
+                            min="1"
+                            max="10"
+                            value={maxRounds}
+                            onChange={(e) => onMaxRoundsChange(parseInt(e.target.value))}
+                            className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                        />
+                        <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            <span>Quick (1-3)</span>
+                            <span>Detailed (4-7)</span>
+                            <span>Comprehensive (8-10)</span>
+                        </div>
+                    </div>
+
+                    {/* Complexity */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Refinement Complexity
+                        </label>
+                        <div className="grid grid-cols-3 gap-2">
+                            {(['basic', 'detailed', 'comprehensive'] as const).map((level) => (
+                                <button
+                                    key={level}
+                                    onClick={() => onComplexityChange(level)}
+                                    className={`px-3 py-2 text-xs font-medium rounded-md transition-colors ${
+                                        complexity === level
+                                            ? 'bg-cyan-500 text-white'
+                                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                                    }`}
+                                >
+                                    {level.charAt(0).toUpperCase() + level.slice(1)}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Output Style */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Output Style
+                        </label>
+                        <select
+                            value={outputStyle}
+                            onChange={(e) => onOutputStyleChange(e.target.value as 'professional' | 'casual' | 'technical' | 'educational')}
+                            className="w-full bg-white dark:bg-gray-900/70 border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                        >
+                            <option value="professional">Professional</option>
+                            <option value="casual">Casual</option>
+                            <option value="technical">Technical</option>
+                            <option value="educational">Educational</option>
+                        </select>
+                    </div>
+
+                    {/* Focus Areas */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Focus Areas
+                        </label>
+                        <div className="space-y-2">
+                            {focusAreas.map((area) => (
+                                <div key={area.id} className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-2">
+                                        <button
+                                            onClick={() => {
+                                                const updatedAreas = focusAreas.map(a =>
+                                                    a.id === area.id ? { ...a, enabled: !a.enabled } : a
+                                                );
+                                                onFocusAreasChange(updatedAreas);
+                                            }}
+                                            className={`relative inline-flex flex-shrink-0 h-4 w-7 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-cyan-500 ${
+                                                area.enabled ? 'bg-cyan-500' : 'bg-gray-200 dark:bg-gray-600'
+                                            }`}
+                                        >
+                                            <span
+                                                className={`inline-block h-3 w-3 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${
+                                                    area.enabled ? 'translate-x-3' : 'translate-x-0'
+                                                }`}
+                                            />
+                                        </button>
+                                        <span className="text-sm text-gray-700 dark:text-gray-300">
+                                            {area.name}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center space-x-1">
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">Weight:</span>
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max="1"
+                                            step="0.1"
+                                            value={area.weight}
+                                            onChange={(e) => {
+                                                const updatedAreas = focusAreas.map(a =>
+                                                    a.id === area.id ? { ...a, weight: parseFloat(e.target.value) } : a
+                                                );
+                                                onFocusAreasChange(updatedAreas);
+                                            }}
+                                            className="w-16 h-1 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                                            disabled={!area.enabled}
+                                        />
+                                        <span className="text-xs text-gray-500 dark:text-gray-400 w-8">
+                                            {area.weight}
+                                        </span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
             )}
@@ -391,6 +537,7 @@ const EnhancerPanel: React.FC<EnhancerPanelProps> = ({
             isOpen={isAboutModalOpen}
             onClose={() => setIsAboutModalOpen(false)}
         />
+    </div>
     </div>
     </>
   );

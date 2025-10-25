@@ -240,3 +240,13 @@ export const GlobeIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <path d="M2 12h20" />
   </svg>
 );
+
+export const SlidersIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" {...props}>
+    <line x1="4" x2="21" y1="4" y2="4" />
+    <line x1="4" x2="21" y1="20" y2="20" />
+    <line x1="6" x2="18" y1="9" y2="9" />
+    <line x1="6" x2="18" y1="15" y2="15" />
+    <line x1="12" x2="12" y1="4" y2="20" />
+  </svg>
+);

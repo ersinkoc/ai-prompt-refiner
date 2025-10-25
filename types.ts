@@ -4,14 +4,40 @@ export interface TechStack {
   logo: string;
 }
 
+export enum QuestionType {
+  CLARIFICATION = 'clarification',
+  SPECIFICATION = 'specification',
+  SCENARIO = 'scenario',
+  CONSTRAINT = 'constraint',
+  EXAMPLE = 'example',
+  PRIORITY = 'priority'
+}
+
+export enum RefinementStatus {
+  REFINING = 'refining',
+  COMPLETE = 'complete',
+  NEEDS_MORE_CONTEXT = 'needs_more_context',
+  REFINING_FURTHER = 'refining_further'
+}
+
 export interface RefinementQuestion {
+  id: string;
+  type: QuestionType;
   question: string;
   answers: string[];
+  allowCustom?: boolean;
+  required?: boolean;
+  dependsOn?: string[];
+  followUpQuestions?: string[];
 }
 
 export interface UserAnswer {
+  id: string;
   question: string;
+  questionId: string;
   answer: string;
+  questionType: QuestionType;
+  timestamp: Date;
 }
 
 export interface PromptHistoryItem {
@@ -57,4 +83,39 @@ export interface TourStep {
   title: string;
   content: string;
   requiredOpenSection?: string;
+}
+
+export interface RefinementContext {
+  basePrompt: string;
+  selectedStacks: string[];
+  conversationHistory: UserAnswer[];
+  refinementRound: number;
+  maxRounds: number;
+  focusAreas: FocusArea[];
+  complexity: 'basic' | 'detailed' | 'comprehensive';
+  outputStyle: 'professional' | 'casual' | 'technical' | 'educational';
+}
+
+export interface FocusArea {
+  id: string;
+  name: string;
+  enabled: boolean;
+  weight: number;
+}
+
+export interface GeminiResponse {
+  status: RefinementStatus;
+  questions?: RefinementQuestion[];
+  finalPrompts?: string[];
+  refinementCount?: number;
+  suggestedApproach?: 'detailed' | 'concise' | 'comprehensive';
+  confidence?: number;
+  nextSteps?: string[];
+}
+
+export interface TechStackContext {
+  stacks: string[];
+  contextualQuestions: RefinementQuestion[];
+  bestPractices: string[];
+  commonIssues: string[];
 }
