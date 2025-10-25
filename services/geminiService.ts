@@ -60,6 +60,197 @@ const sleep = (ms: number): Promise<void> => {
     return new Promise(resolve => setTimeout(resolve, ms));
 };
 
+// Fallback parsing function for malformed responses
+const tryFallbackParse = (text: string, parsedResult?: any): GeminiResponse | null => {
+  try {
+    // If we have a partially parsed result, try to fix it
+    if (parsedResult) {
+      return fixPartialResponse(parsedResult);
+    }
+
+    // Try to extract JSON from malformed text
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const extractedJson = JSON.parse(jsonMatch[0]);
+      return fixPartialResponse(extractedJson);
+    }
+
+    // Try to detect response pattern and create a basic structure
+    if (text.toLowerCase().includes('question') || text.includes('?')) {
+      // Looks like a questioning response
+      return {
+        status: 'refining',
+        questions: [{
+          id: 'fallback_1',
+          type: 'clarification',
+          question: "I need more information to help you better. Could you provide more details about what you'd like to create?",
+          answers: ["Add more context", "Specify the output format", "Describe the target audience"],
+          allowCustom: true,
+          required: false,
+          dependsOn: [],
+          followUpQuestions: []
+        }]
+      };
+    }
+
+    // Default fallback - treat as complete with a generic prompt
+    return {
+      status: 'complete',
+      finalPrompts: [
+        "Based on your request, here's a refined prompt that should work well:",
+        "Alternative approach: Here's another version of the prompt:"
+      ],
+      refinementCount: 1,
+      confidence: 60,
+      suggestedApproach: 'basic',
+      nextSteps: ['Review and refine the prompts as needed']
+    };
+  } catch (error) {
+    return null;
+  }
+};
+
+// Function to fix partial/malformed responses
+const fixPartialResponse = (partialResult: any): GeminiResponse | null => {
+  try {
+    // If it has a status field, we can work with it
+    if (partialResult.status) {
+      const result: Partial<GeminiResponse> = {
+        status: partialResult.status
+      };
+
+      if (partialResult.status === 'refining') {
+        result.questions = Array.isArray(partialResult.questions) ? partialResult.questions : [{
+          id: 'fallback_1',
+          type: 'clarification',
+          question: partialResult.question || "Could you provide more details?",
+          answers: Array.isArray(partialResult.answers) ? partialResult.answers : ["Yes", "No", "Maybe"],
+          allowCustom: true,
+          required: false,
+          dependsOn: [],
+          followUpQuestions: []
+        }];
+      } else if (partialResult.status === 'complete') {
+        result.finalPrompts = Array.isArray(partialResult.finalPrompts) ? partialResult.finalPrompts :
+          [partialResult.prompt || partialResult.result || "Here's your refined prompt."];
+        result.refinementCount = partialResult.refinementCount || 1;
+        result.confidence = partialResult.confidence || 60;
+        result.suggestedApproach = partialResult.suggestedApproach || 'basic';
+        result.nextSteps = partialResult.nextSteps || [];
+      }
+
+      return result as GeminiResponse;
+    }
+
+    // Try to infer status from content
+    if (Array.isArray(partialResult.questions) || partialResult.question) {
+      return {
+        status: 'refining',
+        questions: Array.isArray(partialResult.questions) ? partialResult.questions : [{
+          id: 'fallback_1',
+          type: 'clarification',
+          question: partialResult.question || "Could you provide more details?",
+          answers: partialResult.answers || ["Yes", "No", "Maybe"],
+          allowCustom: true,
+          required: false,
+          dependsOn: [],
+          followUpQuestions: []
+        }]
+      };
+    }
+
+    if (Array.isArray(partialResult.finalPrompts) || partialResult.prompt || partialResult.result) {
+      return {
+        status: 'complete',
+        finalPrompts: Array.isArray(partialResult.finalPrompts) ? partialResult.finalPrompts :
+          [partialResult.prompt || partialResult.result || "Here's your refined prompt."],
+        refinementCount: 1,
+        confidence: 60,
+        suggestedApproach: 'basic',
+        nextSteps: []
+      };
+    }
+
+    return null;
+  } catch (error) {
+    return null;
+  }
+};
+
+// Enhanced validation function
+const validateAndNormalizeResponse = (result: any, context?: RefinementContext): {
+  isValid: boolean;
+  normalizedResponse?: GeminiResponse;
+  errors: string[];
+} => {
+  const errors: string[] = [];
+
+  if (!result || typeof result !== 'object') {
+    errors.push('Response is not a valid object');
+    return { isValid: false, errors };
+  }
+
+  if (!result.status) {
+    errors.push('Missing status field');
+    return { isValid: false, errors };
+  }
+
+  const normalizedResponse: Partial<GeminiResponse> = { status: result.status };
+
+  // Validate refining status
+  if (result.status === 'refining') {
+    if (!Array.isArray(result.questions) || result.questions.length === 0) {
+      errors.push('Questions array is missing or empty for refining status');
+    } else {
+      normalizedResponse.questions = result.questions.map((q: any, index: number) => ({
+        id: q.id || `question_${index}`,
+        type: q.type || 'clarification',
+        question: q.question || `Question ${index + 1}`,
+        answers: Array.isArray(q.answers) ? q.answers : ["Yes", "No", "Maybe"],
+        allowCustom: q.allowCustom !== false,
+        required: q.required || false,
+        dependsOn: q.dependsOn || [],
+        followUpQuestions: q.followUpQuestions || []
+      }));
+    }
+  }
+
+  // Validate complete status
+  if (result.status === 'complete') {
+    if (!Array.isArray(result.finalPrompts) || result.finalPrompts.length === 0) {
+      errors.push('Final prompts array is missing or empty for complete status');
+    } else {
+      normalizedResponse.finalPrompts = result.finalPrompts;
+      normalizedResponse.refinementCount = result.refinementCount || context?.refinementRound || 1;
+      normalizedResponse.confidence = result.confidence || 85;
+      normalizedResponse.suggestedApproach = result.suggestedApproach || 'comprehensive';
+      normalizedResponse.nextSteps = result.nextSteps || [];
+    }
+  }
+
+  // Handle other status values
+  if (result.status === 'needs_more_context') {
+    // Treat as refining with a generic question
+    normalizedResponse.status = 'refining';
+    normalizedResponse.questions = [{
+      id: 'context_needed',
+      type: 'clarification',
+      question: "I need more context to help you better. Could you provide additional details?",
+      answers: ["Add specific requirements", "Describe the use case", "Specify constraints"],
+      allowCustom: true,
+      required: false,
+      dependsOn: [],
+      followUpQuestions: []
+    }];
+  }
+
+  return {
+    isValid: errors.length === 0,
+    normalizedResponse: normalizedResponse as GeminiResponse,
+    errors
+  };
+};
+
 // Analyze prompt complexity and determine approach
 const analyzePromptComplexity = (prompt: string, selectedStacks: string[]): {
   estimatedRounds: number;
@@ -307,38 +498,48 @@ export async function getRefinementStep(
     try {
       result = JSON.parse(jsonText);
     } catch (parseError) {
-      throw new Error("The AI returned a malformed response that could not be read. Please try again.");
+      log(onLog, 'parse_error', {
+        rawText: jsonText,
+        error: parseError instanceof Error ? parseError.message : String(parseError)
+      });
+
+      // Try to extract useful information from malformed JSON
+      const fallbackResult = tryFallbackParse(jsonText);
+      if (fallbackResult) {
+        log(onLog, 'fallback_success', { original: jsonText, fallback: fallbackResult });
+        return fallbackResult;
+      }
+
+      throw new Error("The AI returned a response that couldn't be processed. The service may be experiencing issues. Please try again.");
     }
 
     log(onLog, 'response', { rawResponse: response, parsed: result });
 
-    // Enhanced validation with backward compatibility
-    if (result.status === 'refining' && Array.isArray(result.questions)) {
-      // Add missing properties for backward compatibility
-      result.questions = result.questions.map((q, index) => ({
-        id: q.id || `question_${index}`,
-        type: q.type || 'clarification',
-        question: q.question,
-        answers: q.answers || [],
-        allowCustom: q.allowCustom !== false,
-        required: q.required || false,
-        dependsOn: q.dependsOn || [],
-        followUpQuestions: q.followUpQuestions || []
-      }));
-      return result;
+    // Enhanced validation with more flexible structure checking
+    const validationResult = validateAndNormalizeResponse(result, context);
+    if (validationResult.isValid) {
+      return validationResult.normalizedResponse!;
     }
 
-    if (result.status === 'complete' && Array.isArray(result.finalPrompts)) {
-      result.refinementCount = result.refinementCount || context?.refinementRound || 1;
-      result.confidence = result.confidence || 85;
-      result.suggestedApproach = result.suggestedApproach || 'comprehensive';
-      result.nextSteps = result.nextSteps || [];
-      return result;
+    // If validation fails, try fallback parsing
+    const fallbackResult = tryFallbackParse(jsonText, result);
+    if (fallbackResult) {
+      log(onLog, 'validation_fallback_success', {
+        original: result,
+        fallback: fallbackResult,
+        validationErrors: validationResult.errors
+      });
+      return fallbackResult;
     }
 
-    const validationError = new Error("The AI returned an unexpected response format. Please try refining your initial prompt or check the model's compatibility.");
-      log(onLog, 'error', { message: validationError.message, dataReceived: result });
-      throw validationError;
+    const validationError = new Error(`The AI returned an unexpected response format. This might be a temporary issue. ${validationResult.errors.join('. ')}`);
+    log(onLog, 'validation_error', {
+      message: validationError.message,
+      dataReceived: result,
+      errors: validationResult.errors,
+      rawResponse: jsonText
+    });
+    throw validationError;
 
     } catch (error) {
       lastError = error;

@@ -576,7 +576,7 @@ const App: React.FC = () => {
                     {error}
                 </p>
 
-                {/* Show retry option for service overload errors */}
+                {/* Show retry option for different types of errors */}
                 {(error.includes('overloaded') || error.includes('temporarily unavailable') || error.includes('503')) && (
                   <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-500/30 rounded-lg">
                     <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-3">
@@ -599,6 +599,45 @@ const App: React.FC = () => {
                       >
                         <RefreshCwIcon className="w-4 h-4" />
                         <span>Retry</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Show specific options for response format errors */}
+                {(error.includes('unexpected response format') || error.includes('processed') || error.includes('temporary issue')) && (
+                  <div className="mb-6 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 rounded-lg">
+                    <p className="text-sm text-orange-800 dark:text-orange-200 mb-3">
+                      The AI returned a response that couldn't be processed correctly. This might be a temporary issue.
+                    </p>
+                    <div className="flex justify-center space-x-3">
+                      <button
+                        onClick={() => {
+                          setError(null);
+                          // Retry with same context
+                          if (promptState.refinementRound === 1) {
+                            startRefinementProcess(promptState.basePrompt);
+                          } else if (promptState.refinementRound > 1) {
+                            handleRefinementRequest([]);
+                          }
+                        }}
+                        className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
+                      >
+                        <RefreshCwIcon className="w-4 h-4" />
+                        <span>Try Again</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setError(null);
+                          // Try with simpler prompt
+                          const simplerPrompt = promptState.basePrompt.length > 100
+                            ? promptState.basePrompt.substring(0, 100) + "..."
+                            : promptState.basePrompt;
+                          startRefinementProcess(simplerPrompt);
+                        }}
+                        className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg transition-colors"
+                      >
+                        Try Simpler
                       </button>
                     </div>
                   </div>
