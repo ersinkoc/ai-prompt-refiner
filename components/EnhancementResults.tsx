@@ -42,7 +42,7 @@ const PromptResultsModal: React.FC<PromptResultsModalProps> = ({
         </button>
       }
     >
-      <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-4">
+      <div className="space-y-4 max-h-[calc(100vh-16rem)] overflow-y-auto pr-2">
         {finalPrompts.length > 0 ? finalPrompts.map((prompt, index) => (
           <div key={index} className="bg-gray-50 dark:bg-gray-900/70 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
              <article className={`prose ${theme === 'dark' ? 'prose-invert' : ''} prose-sm max-w-none`}>

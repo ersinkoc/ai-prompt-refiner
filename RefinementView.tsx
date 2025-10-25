@@ -35,14 +35,9 @@ const RefinementView: React.FC<RefinementViewProps> = ({ isLoading, questions, o
   };
 
   return (
-    <div className="relative w-full max-w-3xl">
-      <div className="bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm p-8 rounded-xl border border-gray-200 dark:border-gray-700/50">
-          <div className="mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Refining prompt idea:</p>
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">"{basePrompt}"</h2>
-          </div>
-        
-        <div className="space-y-6">
+    <div className="w-full max-w-3xl h-full flex flex-col">
+      <div className="flex-1 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm p-8 rounded-xl border border-gray-200 dark:border-gray-700/50 flex flex-col">
+        <div className="flex-1 overflow-y-auto pr-2 space-y-6 pb-4">
           {questions.map((q, index) => (
             <div key={index}>
               <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-3">{index + 1}. {q.question}</h3>
@@ -72,7 +67,7 @@ const RefinementView: React.FC<RefinementViewProps> = ({ isLoading, questions, o
           ))}
         </div>
 
-        <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-900/50">
           <button
             onClick={handleSubmit}
             disabled={Object.keys(answers).length !== questions.length}

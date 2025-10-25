@@ -453,7 +453,7 @@ const App: React.FC = () => {
               />
           </div>
         </div>
-        <main className="flex-1 flex flex-col items-center justify-center p-6 bg-gray-100 dark:bg-gray-900 overflow-y-auto relative">
+        <main className="flex-1 flex flex-col p-6 bg-gray-100 dark:bg-gray-900 overflow-y-auto relative">
            {isPanelCollapsed && (
               <button
                 onClick={() => setIsPanelCollapsed(false)}
@@ -465,12 +465,14 @@ const App: React.FC = () => {
             )}
           {promptState.stage === 'idle' && renderIdleContent()}
           {(promptState.stage === 'refining' || promptState.stage === 'loading') && (
-              <RefinementView
-                  isLoading={promptState.stage === 'loading'}
-                  questions={promptState.questions}
-                  onRefine={handleRefinementRequest}
-                  basePrompt={promptState.basePrompt}
-              />
+              <div className="flex-1 flex items-center justify-center">
+                  <RefinementView
+                      isLoading={promptState.stage === 'loading'}
+                      questions={promptState.questions}
+                      onRefine={handleRefinementRequest}
+                      basePrompt={promptState.basePrompt}
+                  />
+              </div>
           )}
           {promptState.stage === 'error' && error && (
             <div className="text-center bg-red-50 dark:bg-red-900/20 backdrop-blur-sm p-10 rounded-xl border border-red-200 dark:border-red-500/30 max-w-2xl">
