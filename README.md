@@ -30,7 +30,7 @@
 
 ---
 
-<img src="screenshot.png" alt="AI Prompt Refiner - Screenshot" />
+<img src="screenshot2.png" alt="AI Prompt Refiner - Screenshot" />
 
 ## 🎯 About
 
