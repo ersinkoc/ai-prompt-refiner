@@ -11,7 +11,7 @@ import { getRefinementStep } from './services/geminiService';
 import { getApiKey, saveApiKey } from './services/apiKeyService';
 import { getTourStatus, setTourCompleted } from './services/tourService';
 import { idlePrompts } from './components/idlePrompts';
-import { BotIcon, AlertTriangleIcon, MenuIcon } from './components/icons';
+import { BotIcon, AlertTriangleIcon, MenuIcon, RefreshCwIcon } from './components/icons';
 
 const DEFAULT_BASE_SYSTEM_INSTRUCTION = `You are an expert-level AI prompt engineer. Your primary goal is to help a user refine a basic prompt idea into a final, detailed, and effective prompt through a conversational process.
 
@@ -575,12 +575,43 @@ const App: React.FC = () => {
                 <p className="text-md text-red-700 dark:text-red-300 mb-6">
                     {error}
                 </p>
-                <button
+
+                {/* Show retry option for service overload errors */}
+                {(error.includes('overloaded') || error.includes('temporarily unavailable') || error.includes('503')) && (
+                  <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-500/30 rounded-lg">
+                    <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-3">
+                      The AI service is experiencing high demand. You can try again or wait a moment before retrying.
+                    </p>
+                    <div className="flex justify-center space-x-3">
+                      <button
+                        onClick={() => {
+                          setError(null);
+                          // Retry the last operation based on current state
+                          if (promptState.refinementRound === 1) {
+                            // First round - restart refinement
+                            startRefinementProcess(promptState.basePrompt);
+                          } else if (promptState.refinementRound > 1) {
+                            // Subsequent round - continue refinement
+                            handleRefinementRequest([]);
+                          }
+                        }}
+                        className="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
+                      >
+                        <RefreshCwIcon className="w-4 h-4" />
+                        <span>Retry</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-center space-x-3">
+                  <button
                     onClick={handleCloseModal}
                     className="bg-red-500 hover:bg-red-600 text-white font-semibold px-6 py-2 rounded-lg transition-colors"
-                >
+                  >
                     Start Over
-                </button>
+                  </button>
+                </div>
             </div>
           )}
         </main>

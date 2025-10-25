@@ -66,7 +66,7 @@ export type GeminiModel = 'gemini-2.5-pro' | 'gemini-2.5-flash';
 
 export interface DebugLog {
   timestamp: string;
-  type: 'request' | 'response' | 'error';
+  type: 'request' | 'response' | 'error' | 'retry_attempt' | 'retry_delay';
   data: any;
 }
 

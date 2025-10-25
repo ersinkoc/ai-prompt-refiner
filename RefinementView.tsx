@@ -327,9 +327,14 @@ const RefinementView: React.FC<RefinementViewProps> = ({
 
       {isLoading && (
         <div className="absolute inset-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm flex items-center justify-center rounded-xl z-10">
-          <div className="flex items-center justify-center space-x-3">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-cyan-500 dark:border-cyan-400"></div>
-            <span className="text-lg text-gray-700 dark:text-gray-300">The AI is thinking...</span>
+          <div className="flex flex-col items-center justify-center space-y-4 text-center max-w-md">
+            <div className="flex items-center justify-center space-x-3">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-cyan-500 dark:border-cyan-400"></div>
+              <span className="text-lg text-gray-700 dark:text-gray-300">The AI is thinking...</span>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              If this takes too long, the service might be experiencing high demand. The system will automatically retry if needed.
+            </p>
           </div>
         </div>
       )}

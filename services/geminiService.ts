@@ -11,6 +11,55 @@ const log = (onLog: (log: DebugLog) => void, type: DebugLog['type'], data: any) 
     });
 };
 
+// Retry configuration for API calls
+const RETRY_CONFIG = {
+    maxRetries: 3,
+    baseDelay: 1000, // 1 second
+    maxDelay: 10000, // 10 seconds
+    backoffFactor: 2,
+};
+
+// Function to calculate delay with exponential backoff
+const getRetryDelay = (attemptNumber: number): number => {
+    const delay = RETRY_CONFIG.baseDelay * Math.pow(RETRY_CONFIG.backoffFactor, attemptNumber - 1);
+    return Math.min(delay, RETRY_CONFIG.maxDelay);
+};
+
+// Function to check if error is retryable
+const isRetryableError = (error: any): boolean => {
+    if (!error) return false;
+
+    const errorMessage = error.message || String(error);
+    const errorCode = error.code || error.status;
+
+    // Check for 503 Service Unavailable
+    if (errorCode === 503 || errorMessage.includes('503')) {
+        return true;
+    }
+
+    // Check for overloaded model messages
+    if (errorMessage.includes('overloaded') || errorMessage.includes('UNAVAILABLE')) {
+        return true;
+    }
+
+    // Check for network errors that might be temporary
+    if (errorMessage.includes('fetch') || errorMessage.includes('network') || errorMessage.includes('timeout')) {
+        return true;
+    }
+
+    // Check for rate limiting (429)
+    if (errorCode === 429 || errorMessage.includes('429') || errorMessage.includes('rate limit')) {
+        return true;
+    }
+
+    return false;
+};
+
+// Sleep function for delays
+const sleep = (ms: number): Promise<void> => {
+    return new Promise(resolve => setTimeout(resolve, ms));
+};
+
 // Analyze prompt complexity and determine approach
 const analyzePromptComplexity = (prompt: string, selectedStacks: string[]): {
   estimatedRounds: number;
@@ -129,10 +178,14 @@ export async function getRefinementStep(
   if (!apiKey) {
     throw new Error("Gemini API Key not found. Please set your API key in the settings.");
   }
-  
+
   const ai = new GoogleGenAI({ apiKey });
 
-  try {
+  let lastError: any = null;
+
+  // Retry logic with exponential backoff
+  for (let attempt = 1; attempt <= RETRY_CONFIG.maxRetries; attempt++) {
+    try {
     // Use enhanced system instruction if context is provided
     const finalSystemInstruction = context
       ? generateEnhancedSystemInstruction(context)
@@ -284,29 +337,60 @@ export async function getRefinementStep(
     }
 
     const validationError = new Error("The AI returned an unexpected response format. Please try refining your initial prompt or check the model's compatibility.");
-    log(onLog, 'error', { message: validationError.message, dataReceived: result });
-    throw validationError;
+      log(onLog, 'error', { message: validationError.message, dataReceived: result });
+      throw validationError;
 
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    log(onLog, 'error', { message: errorMessage, error: error });
-    
-    // Re-throw our custom, user-friendly errors that were thrown in the 'try' block
-    if (errorMessage.includes("malformed response") || errorMessage.includes("unexpected response format") || errorMessage.includes("empty response")) {
-        throw error;
-    }
+    } catch (error) {
+      lastError = error;
+      const errorMessage = error instanceof Error ? error.message : String(error);
 
-    // Check for specific API key-related errors from the service and create a friendlier message
-    if (errorMessage.toLowerCase().includes('api key not valid') || errorMessage.toLowerCase().includes('permission_denied')) {
-        throw new Error('Your API key is not valid or has been rejected. Please check your key and update it in the settings.');
-    }
+      // Log the error for this attempt
+      log(onLog, 'retry_attempt', {
+        attempt,
+        maxRetries: RETRY_CONFIG.maxRetries,
+        error: errorMessage,
+        isRetryable: isRetryableError(error)
+      });
 
-    // Check for network-related errors and create a friendlier message
-    if (errorMessage.toLowerCase().includes('fetch')) {
-         throw new Error('A network error occurred. Please check your internet connection and try again.');
+      // Check if this is a retryable error and we have more attempts
+      if (attempt < RETRY_CONFIG.maxRetries && isRetryableError(error)) {
+        const delay = getRetryDelay(attempt);
+        log(onLog, 'retry_delay', { delay, attempt });
+
+        // Wait before retrying
+        await sleep(delay);
+        continue;
+      }
+
+      // If we've exhausted all retries or it's not retryable, handle the error
+      const finalErrorMessage = error instanceof Error ? error.message : String(error);
+      log(onLog, 'error', { message: finalErrorMessage, error: error, totalAttempts: attempt });
+
+      // Check if we exhausted retries due to service overload
+      if (attempt === RETRY_CONFIG.maxRetries && isRetryableError(lastError)) {
+        throw new Error(`The AI service is temporarily unavailable after ${RETRY_CONFIG.maxRetries} retry attempts. This usually happens when the model is overloaded. Please wait a moment and try again.`);
+      }
+
+      // Re-throw our custom, user-friendly errors that were thrown in the 'try' block
+      if (finalErrorMessage.includes("malformed response") || finalErrorMessage.includes("unexpected response format") || finalErrorMessage.includes("empty response")) {
+          throw error;
+      }
+
+      // Check for specific API key-related errors from the service and create a friendlier message
+      if (finalErrorMessage.toLowerCase().includes('api key not valid') || finalErrorMessage.toLowerCase().includes('permission_denied')) {
+          throw new Error('Your API key is not valid or has been rejected. Please check your key and update it in the settings.');
+      }
+
+      // Check for network-related errors and create a friendlier message
+      if (finalErrorMessage.toLowerCase().includes('fetch')) {
+           throw new Error('A network error occurred. Please check your internet connection and try again.');
+      }
+
+      // Generic fallback for other errors (e.g., server-side issues)
+      throw new Error(`An unexpected error occurred while communicating with the AI. Details: ${finalErrorMessage}`);
     }
-    
-    // Generic fallback for other errors (e.g., server-side issues)
-    throw new Error(`An unexpected error occurred while communicating with the AI. Details: ${errorMessage}`);
   }
+
+  // This should never be reached, but just in case
+  throw new Error('Unexpected error: Retry loop completed without success or failure.');
 }
